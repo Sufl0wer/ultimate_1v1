@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 from django.utils.translation import gettext_lazy as _
 
-from accounts.models import User
+from accounts.models import Discipline, Tournament, User
 
 
 class UserAdminCreationForm(UserCreationForm):
@@ -46,3 +46,24 @@ class UserAdmin(DjangoUserAdmin):
             },
         ),
     )
+
+
+class DisciplineInline(admin.TabularInline):
+    model = Discipline
+    extra = 1
+
+
+@admin.register(Tournament)
+class TournamentAdmin(admin.ModelAdmin):
+    list_display = ("id", "result", "start_time", "end_time")
+    list_filter = ("start_time", "end_time")
+    filter_horizontal = ("users",)
+    date_hierarchy = "start_time"
+    inlines = [DisciplineInline]
+
+
+@admin.register(Discipline)
+class DisciplineAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "tournament")
+    list_filter = ("tournament",)
+    search_fields = ("name", "description")

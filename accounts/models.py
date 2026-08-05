@@ -42,3 +42,32 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return self.email
+
+
+class Tournament(models.Model):
+    users = models.ManyToManyField(User, related_name="tournaments", blank=True)
+    result = models.IntegerField()
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-start_time"]
+
+    def __str__(self) -> str:
+        return f"Tournament #{self.pk} ({self.start_time:%Y-%m-%d %H:%M})"
+
+
+class Discipline(models.Model):
+    tournament = models.ForeignKey(
+        Tournament,
+        on_delete=models.CASCADE,
+        related_name="disciplines",
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
