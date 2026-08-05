@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Log in · Leafmail{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Welcome back</h1>
+  <p class="lead">Log in with your verified email and password.</p>
+
+  <form class="form" method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="alert alert-error">{{ form.non_field_errors|striptags }}</div>
+    {% endif %}
+
+    <label>
+      Email
+      {{ form.username }}
+      {% if form.username.errors %}<span class="field-error">{{ form.username.errors.0 }}</span>{% endif %}
+    </label>
+    <label>
+      Password
+      {{ form.password }}
+      {% if form.password.errors %}<span class="field-error">{{ form.password.errors.0 }}</span>{% endif %}
+    </label>
+    <button class="btn" type="submit">Log in</button>
+  </form>
+
+  <p class="meta">Need an account? <a href="{% url 'register' %}">Register</a></p>
+</section>
+{% endblock %}

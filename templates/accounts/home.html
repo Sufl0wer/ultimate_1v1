@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Home · Leafmail{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>You’re in</h1>
+  <p class="lead">Your account is active and verified.</p>
+  <p><strong>Email:</strong> {{ user.email }}</p>
+  <div class="actions">
+    <form action="{% url 'logout' %}" method="post">
+      {% csrf_token %}
+      <button class="btn btn-secondary" type="submit">Log out</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Email verification · Leafmail{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>{% if ok %}Email verified{% else %}Verification failed{% endif %}</h1>
+  <p class="lead">{{ message }}</p>
+  <div class="actions">
+    {% if ok %}
+      <a class="btn" href="{% url 'login' %}">Continue to login</a>
+    {% else %}
+      <a class="btn" href="{% url 'register' %}">Register again</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
