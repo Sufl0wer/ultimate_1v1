@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 from django.utils.translation import gettext_lazy as _
 
-from accounts.models import Discipline, Tournament, User
+from accounts.models import Discipline, Tournament, TournamentPlayer, User
 
 
 class UserAdminCreationForm(UserCreationForm):
@@ -48,22 +48,34 @@ class UserAdmin(DjangoUserAdmin):
     )
 
 
-class DisciplineInline(admin.TabularInline):
-    model = Discipline
-    extra = 1
+class TournamentPlayerInline(admin.TabularInline):
+    model = TournamentPlayer
+    extra = 0
+    filter_horizontal = ("selected_disciplines",)
+    autocomplete_fields = ("user",)
 
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ("id", "result", "start_time", "end_time")
-    list_filter = ("start_time", "end_time")
-    filter_horizontal = ("users",)
-    date_hierarchy = "start_time"
-    inlines = [DisciplineInline]
+    list_display = ("id", "invite_code", "status", "host", "start_time", "end_time", "result")
+    list_filter = ("status", "start_time")
+    search_fields = ("invite_code", "host__email")
+    autocomplete_fields = ("host",)
+    filter_horizontal = ("disciplines",)
+    readonly_fields = ("invite_code", "created_at")
+    inlines = [TournamentPlayerInline]
 
 
 @admin.register(Discipline)
 class DisciplineAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "tournament")
-    list_filter = ("tournament",)
+    list_display = ("id", "name")
     search_fields = ("name", "description")
+
+
+@admin.register(TournamentPlayer)
+class TournamentPlayerAdmin(admin.ModelAdmin):
+    list_display = ("id", "tournament", "user", "is_ready", "joined_at")
+    list_filter = ("is_ready",)
+    search_fields = ("user__email", "tournament__invite_code")
+    filter_horizontal = ("selected_disciplines",)
+    autocomplete_fields = ("tournament", "user")

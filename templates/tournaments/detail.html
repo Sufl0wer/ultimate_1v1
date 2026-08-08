@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Tournament #{{ tournament.id }}{% endblock %}
+{% block content %}
+<section class="panel panel-wide">
+  <h1>Tournament #{{ tournament.id }}</h1>
+  <p class="lead">Both players are ready. Here is your match.</p>
+
+  <div class="status-row">
+    <span>Code: <strong>{{ tournament.invite_code }}</strong></span>
+    <span>Host: <strong>{{ tournament.host.email }}</strong></span>
+    {% if tournament.start_time %}
+    <span>Started: <strong>{{ tournament.start_time }}</strong></span>
+    {% endif %}
+  </div>
+
+  <h2 class="section-title">Players</h2>
+  <ul class="plain-list">
+    {% for player in tournament.players.all %}
+    <li>{{ player.user.email }}{% if player.user_id == tournament.host_id %} <span class="muted">(host)</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+
+  <h2 class="section-title">Disciplines</h2>
+  <ul class="plain-list">
+    {% for discipline in tournament.disciplines.all %}
+    <li>
+      <strong>{{ discipline.name }}</strong>
+      {% if discipline.description %}
+      <span class="muted"> — {{ discipline.description }}</span>
+      {% endif %}
+    </li>
+    {% empty %}
+    <li class="muted">No disciplines were selected.</li>
+    {% endfor %}
+  </ul>
+
+  <div class="actions">
+    <a class="btn btn-secondary" href="{% url 'home' %}">Back to home</a>
+  </div>
+</section>
+{% endblock %}

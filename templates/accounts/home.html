@@ -1,15 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Home · Leafmail{% endblock %}
+{% block title %}Home{% endblock %}
 {% block content %}
-<section class="panel">
-  <h1>You’re in</h1>
-  <p class="lead">Your account is active and verified.</p>
-  <p><strong>Email:</strong> {{ user.email }}</p>
-  <div class="actions">
-    <form action="{% url 'logout' %}" method="post">
+<section class="panel panel-wide">
+  <h1>Tournaments</h1>
+  <p class="lead">Create a match and share the invite code, or join with a code from a friend.</p>
+
+  <div class="home-grid">
+    <form class="form" method="post" action="{% url 'tournament_create' %}">
       {% csrf_token %}
-      <button class="btn btn-secondary" type="submit">Log out</button>
+      <button class="btn" type="submit">Create tournament</button>
+    </form>
+
+    <form class="form" method="post" action="{% url 'tournament_join' %}">
+      {% csrf_token %}
+      <label>
+        Invite code
+        <input type="text" name="invite_code" maxlength="16" required placeholder="ABCD1234" autocomplete="off">
+      </label>
+      <button class="btn btn-secondary" type="submit">Join tournament</button>
     </form>
   </div>
+</section>
+
+<section class="panel panel-wide" style="margin-top: 1.25rem;">
+  <h2 class="section-title">Your tournaments</h2>
+  {% if tournaments %}
+  <ul class="tournament-list">
+    {% for tournament in tournaments %}
+    <li>
+      <div>
+        <strong>Tournament #{{ tournament.id }}</strong>
+        <span class="muted">· {{ tournament.get_status_display }}</span>
+        <div class="muted small">Code: {{ tournament.invite_code }}</div>
+      </div>
+      {% if tournament.status == "active" %}
+      <a class="btn btn-secondary" href="{% url 'tournament_detail' tournament.pk %}">Open</a>
+      {% else %}
+      <a class="btn btn-secondary" href="{% url 'tournament_lobby' tournament.pk %}">Lobby</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No tournaments yet.</p>
+  {% endif %}
 </section>
 {% endblock %}

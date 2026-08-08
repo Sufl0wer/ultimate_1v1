@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Tournament lobby{% endblock %}
+{% block content %}
+<section class="panel panel-wide" id="lobby"
+  data-status-url="{{ status_url }}"
+  data-detail-url="{{ detail_url }}"
+  data-opponent-joined="{% if opponent %}1{% else %}0{% endif %}"
+  data-is-ready="{% if player.is_ready %}1{% else %}0{% endif %}">
+  <h1>Tournament lobby</h1>
+  <p class="lead">
+    {% if opponent %}
+      Both players are here. Choose disciplines and press Ready.
+    {% else %}
+      Waiting for an opponent to join with your invite code.
+    {% endif %}
+  </p>
+
+  <div class="invite-box">
+    <div>
+      <div class="muted small">Invite code</div>
+      <code id="invite-code" class="invite-code">{{ tournament.invite_code }}</code>
+    </div>
+    <button class="btn btn-secondary" type="button" id="copy-invite">Copy</button>
+  </div>
+
+  <div class="status-row">
+    <span>Status: <strong>{{ tournament.get_status_display }}</strong></span>
+    <span>You: <strong>{{ request.user.email }}</strong></span>
+    <span>
+      Opponent:
+      <strong id="opponent-label">
+        {% if opponent %}{{ opponent.user.email }}{% else %}Waiting…{% endif %}
+      </strong>
+    </span>
+  </div>
+
+  {% if player.is_ready %}
+  <div class="alert alert-success">You’re ready. Waiting for your opponent to confirm.</div>
+  {% endif %}
+
+  <form class="form" method="post" action="{% url 'tournament_ready' tournament.pk %}">
+    {% csrf_token %}
+    <h2 class="section-title">Disciplines</h2>
+    <div class="discipline-list">
+      {% for discipline in disciplines %}
+      <label class="discipline-item {% if player.is_ready %}is-disabled{% endif %}">
+        <input
+          type="checkbox"
+          name="disciplines"
+          value="{{ discipline.id }}"
+          {% if discipline.id in selected_ids %}checked{% endif %}
+          {% if player.is_ready %}disabled{% endif %}
+        >
+        <span>
+          <strong>{{ discipline.name }}</strong>
+          {% if discipline.description %}
+          <span class="muted small">{{ discipline.description }}</span>
+          {% endif %}
+        </span>
+      </label>
+      {% empty %}
+      <p class="muted">No disciplines available. Ask an admin to add some.</p>
+      {% endfor %}
+    </div>
+
+    {% if player.is_ready %}
+      <button class="btn" type="submit" disabled>Ready</button>
+    {% elif not opponent %}
+      <button class="btn" type="submit" disabled>Ready</button>
+      <p class="meta">Ready unlocks after your opponent joins.</p>
+    {% else %}
+      <button class="btn" type="submit">Ready</button>
+    {% endif %}
+  </form>
+
+  <p class="meta"><a href="{% url 'home' %}">Back to home</a></p>
+</section>
+
+<script>
+(function () {
+  const lobby = document.getElementById("lobby");
+  if (!lobby) return;
+
+  const statusUrl = lobby.dataset.statusUrl;
+  const detailUrl = lobby.dataset.detailUrl;
+  let opponentJoined = lobby.dataset.opponentJoined === "1";
+  const isReady = lobby.dataset.isReady === "1";
+
+  const copyBtn = document.getElementById("copy-invite");
+  const codeEl = document.getElementById("invite-code");
+  if (copyBtn && codeEl) {
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(codeEl.textContent.trim());
+        copyBtn.textContent = "Copied";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      } catch (err) {
+        const range = document.createRange();
+        range.selectNodeContents(codeEl);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    });
+  }
+
+  async function pollStatus() {
+    try {
+      const response = await fetch(statusUrl, {
+        headers: { "Accept": "application/json" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+
+      if (data.active && data.redirect_url) {
+        window.location.href = data.redirect_url;
+        return;
+      }
+
+      if (data.opponent_joined && !opponentJoined) {
+        window.location.reload();
+        return;
+      }
+
+      if (isReady && data.both_ready && data.redirect_url) {
+        window.location.href = data.redirect_url;
+      }
+    } catch (err) {
+      // Keep polling even if one request fails.
+    }
+  }
+
+  setInterval(pollStatus, 2500);
+  pollStatus();
+})();
+</script>
+{% endblock %}

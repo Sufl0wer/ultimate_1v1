@@ -107,4 +107,9 @@ class EmailLogoutView(LogoutView):
 
 @login_required
 def home(request: HttpRequest) -> HttpResponse:
-    return render(request, "accounts/home.html")
+    tournaments = (
+        request.user.tournaments.select_related("host")
+        .prefetch_related("players")
+        .all()
+    )
+    return render(request, "accounts/home.html", {"tournaments": tournaments})
