@@ -263,6 +263,86 @@ input:focus {
   color: var(--ink);
 }
 
+.result-list {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.result-item {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(15, 19, 23, 0.7);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.edit-results-btn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.winner-edit {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+
+.winner-edit.is-open {
+  grid-template-rows: 1fr;
+}
+
+.winner-edit-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.winner-pick {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+}
+
+.winner-pick form {
+  margin: 0;
+}
+
+.winner-pick .btn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.winner-pick .btn.is-selected {
+  background: var(--accent);
+  color: #0c1510;
+  border-color: var(--accent);
+}
+
+.winner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.65rem 0 0;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.crown-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  color: #f5c518;
+}
+
 .field-error {
   color: var(--danger);
   font-size: 0.85rem;

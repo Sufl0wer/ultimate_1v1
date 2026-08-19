@@ -3,13 +3,21 @@
 {% block content %}
 <section class="panel panel-wide">
   <h1>Tournament #{{ tournament.id }}</h1>
-  <p class="lead">Both players are ready. Here is your match.</p>
+  {% if tournament.status == "finished" %}
+  <p class="lead">This tournament is finished.</p>
+  {% else %}
+  <p class="lead">Track who won each discipline. Use Edit results to choose a winner.</p>
+  {% endif %}
 
   <div class="status-row">
+    <span>Status: <strong>{{ tournament.get_status_display }}</strong></span>
     <span>Code: <strong>{{ tournament.invite_code }}</strong></span>
     <span>Host: <strong>{{ tournament.host.email }}</strong></span>
     {% if tournament.start_time %}
     <span>Started: <strong>{{ tournament.start_time }}</strong></span>
+    {% endif %}
+    {% if tournament.end_time %}
+    <span>Ended: <strong>{{ tournament.end_time }}</strong></span>
     {% endif %}
   </div>
 
@@ -20,22 +28,121 @@
     {% endfor %}
   </ul>
 
-  <h2 class="section-title">Disciplines</h2>
+  <h2 class="section-title">Current progress</h2>
   <ul class="plain-list">
-    {% for discipline in tournament.disciplines.all %}
-    <li>
-      <strong>{{ discipline.name }}</strong>
-      {% if discipline.description %}
-      <span class="muted"> — {{ discipline.description }}</span>
-      {% endif %}
-    </li>
-    {% empty %}
-    <li class="muted">No disciplines were selected.</li>
-    {% endfor %}
+    {% if scoreboard|length >= 2 %}
+      <li>{{ scoreboard.0.user.email }} {{ scoreboard.0.score }} : {{ scoreboard.1.score }} {{ scoreboard.1.user.email }}</li>
+    {% endif %}
+    <li>Disciplines: {{ discipline_count }}</li>
   </ul>
 
+  <h2 class="section-title">Disciplines</h2>
+  <div class="result-list">
+    {% for row in discipline_rows %}
+    <div class="result-item" data-result-item>
+      <div class="result-header">
+        <div>
+          <strong>{{ row.discipline.name }}</strong>
+          {% if row.discipline.description %}
+          <div class="muted small">{{ row.discipline.description }}</div>
+          {% endif %}
+        </div>
+        {% if tournament.status == "active" %}
+        <button
+          class="btn btn-secondary edit-results-btn"
+          type="button"
+          data-edit-results
+          aria-expanded="false"
+        >
+          Edit results
+        </button>
+        {% endif %}
+      </div>
+
+      {% if tournament.status == "active" %}
+      <div class="winner-edit" data-winner-edit>
+        <div class="winner-edit-inner">
+          <div class="winner-pick">
+            {% for player in row.players %}
+            <form method="post" action="{% url 'tournament_set_discipline_winner' tournament.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="discipline_id" value="{{ row.discipline.id }}">
+              <input type="hidden" name="winner_id" value="{{ player.user.id }}">
+              <button
+                class="btn btn-secondary {% if row.winner and row.winner.id == player.user.id %}is-selected{% endif %}"
+                type="submit"
+                data-winner-choice
+              >
+                {{ player.user.email }}
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if row.winner %}
+      <p class="winner-text">
+        <svg class="crown-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M3 18h18v2.5H3V18zm1.5-3.5L5 8l4.2 3.2L12 5l2.8 6.2L19 8l.5 6.5H4.5z"/>
+        </svg>
+        {{ row.winner.email }}
+      </p>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p class="muted">No disciplines were selected.</p>
+    {% endfor %}
+  </div>
+
   <div class="actions">
+    {% if tournament.status == "active" %}
+    <form method="post" action="{% url 'tournament_finish' tournament.pk %}">
+      {% csrf_token %}
+      <button class="btn" type="submit">Finish tournament</button>
+    </form>
+    {% endif %}
     <a class="btn btn-secondary" href="{% url 'home' %}">Back to home</a>
   </div>
 </section>
+
+{% if tournament.status == "active" %}
+<script>
+  (function () {
+    function closePanel(item) {
+      const panel = item.querySelector("[data-winner-edit]");
+      const button = item.querySelector("[data-edit-results]");
+      if (!panel || !button) return;
+      panel.classList.remove("is-open");
+      button.setAttribute("aria-expanded", "false");
+    }
+
+    function openPanel(item) {
+      const panel = item.querySelector("[data-winner-edit]");
+      const button = item.querySelector("[data-edit-results]");
+      if (!panel || !button) return;
+      panel.classList.add("is-open");
+      button.setAttribute("aria-expanded", "true");
+    }
+
+    document.querySelectorAll("[data-result-item]").forEach(function (item) {
+      const toggle = item.querySelector("[data-edit-results]");
+      if (!toggle) return;
+
+      toggle.addEventListener("click", function () {
+        const isOpen = item.querySelector("[data-winner-edit]")?.classList.contains("is-open");
+        document.querySelectorAll("[data-result-item]").forEach(closePanel);
+        if (!isOpen) openPanel(item);
+      });
+
+      item.querySelectorAll("[data-winner-choice]").forEach(function (choice) {
+        choice.addEventListener("click", function () {
+          closePanel(item);
+        });
+      });
+    });
+  })();
+</script>
+{% endif %}
 {% endblock %}

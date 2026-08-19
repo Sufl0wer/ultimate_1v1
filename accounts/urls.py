@@ -3,9 +3,11 @@ from django.urls import path
 from accounts.tournament_views import (
     tournament_create,
     tournament_detail,
+    tournament_finish,
     tournament_join,
     tournament_lobby,
     tournament_ready,
+    tournament_set_discipline_winner,
     tournament_status,
 )
 from accounts.views import EmailLoginView, EmailLogoutView, RegisterView, VerifyEmailView, home
@@ -20,6 +22,12 @@ urlpatterns = [
     path("tournaments/join/", tournament_join, name="tournament_join"),
     path("tournaments/<int:pk>/lobby/", tournament_lobby, name="tournament_lobby"),
     path("tournaments/<int:pk>/ready/", tournament_ready, name="tournament_ready"),
+    path(
+        "tournaments/<int:pk>/disciplines/winner/",
+        tournament_set_discipline_winner,
+        name="tournament_set_discipline_winner",
+    ),
+    path("tournaments/<int:pk>/finish/", tournament_finish, name="tournament_finish"),
     path("tournaments/<int:pk>/status/", tournament_status, name="tournament_status"),
     path("tournaments/<int:pk>/", tournament_detail, name="tournament_detail"),
 ]

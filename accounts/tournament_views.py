@@ -6,11 +6,42 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
-from accounts.models import Discipline, Tournament, TournamentPlayer
+from accounts.models import Discipline, Tournament, TournamentDisciplineResult, TournamentPlayer
 
 
 def _get_membership(tournament: Tournament, user) -> TournamentPlayer | None:
     return tournament.players.filter(user=user).first()
+
+
+def _discipline_rows(tournament: Tournament) -> list[dict]:
+    winners = {
+        result.discipline_id: result.winner
+        for result in tournament.discipline_results.select_related("winner")
+    }
+    players = list(tournament.players.select_related("user"))
+    rows = []
+    for discipline in tournament.disciplines.all():
+        rows.append(
+            {
+                "discipline": discipline,
+                "winner": winners.get(discipline.id),
+                "players": players,
+            }
+        )
+    return rows
+
+
+def _scoreboard(tournament: Tournament) -> list[dict]:
+    players = list(tournament.players.select_related("user"))
+    win_counts = {player.user_id: 0 for player in players}
+    for result in tournament.discipline_results.all():
+        if result.winner_id in win_counts:
+            win_counts[result.winner_id] += 1
+
+    return [
+        {"user": player.user, "score": win_counts[player.user_id]}
+        for player in players
+    ]
 
 
 @login_required
@@ -35,6 +66,10 @@ def tournament_join(request: HttpRequest) -> HttpResponse:
 
     if tournament.status == Tournament.STATUS_ACTIVE:
         messages.error(request, "This tournament has already started.")
+        return redirect("home")
+
+    if tournament.status == Tournament.STATUS_FINISHED:
+        messages.error(request, "This tournament has already finished.")
         return redirect("home")
 
     existing = _get_membership(tournament, request.user)
@@ -71,6 +106,9 @@ def tournament_lobby(request: HttpRequest, pk: int) -> HttpResponse:
     if tournament.status == Tournament.STATUS_ACTIVE:
         return redirect("tournament_detail", pk=tournament.pk)
 
+    if tournament.status == Tournament.STATUS_FINISHED:
+        return redirect("tournament_detail", pk=tournament.pk)
+
     disciplines = Discipline.objects.all()
     selected_ids = set(player.selected_disciplines.values_list("id", flat=True))
     opponent = tournament.players.exclude(user=request.user).select_related("user").first()
@@ -101,6 +139,9 @@ def tournament_ready(request: HttpRequest, pk: int) -> HttpResponse:
         return redirect("home")
 
     if tournament.status == Tournament.STATUS_ACTIVE:
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    if tournament.status == Tournament.STATUS_FINISHED:
         return redirect("tournament_detail", pk=tournament.pk)
 
     if tournament.player_count() < 2:
@@ -139,6 +180,7 @@ def tournament_detail(request: HttpRequest, pk: int) -> HttpResponse:
         Tournament.objects.select_related("host").prefetch_related(
             "disciplines",
             "players__user",
+            "discipline_results__winner",
         ),
         pk=pk,
     )
@@ -146,14 +188,76 @@ def tournament_detail(request: HttpRequest, pk: int) -> HttpResponse:
         messages.error(request, "You are not part of this tournament.")
         return redirect("home")
 
-    if tournament.status != Tournament.STATUS_ACTIVE:
+    if tournament.status not in (Tournament.STATUS_ACTIVE, Tournament.STATUS_FINISHED):
         return redirect("tournament_lobby", pk=tournament.pk)
+
+    # breakpoint()
 
     return render(
         request,
         "tournaments/detail.html",
-        {"tournament": tournament},
+        {
+            "tournament": tournament,
+            "discipline_rows": _discipline_rows(tournament),
+            "scoreboard": _scoreboard(tournament),
+            "discipline_count": tournament.disciplines.count(),
+        },
     )
+
+
+@login_required
+@require_POST
+def tournament_set_discipline_winner(request: HttpRequest, pk: int) -> HttpResponse:
+    tournament = get_object_or_404(Tournament, pk=pk)
+    if _get_membership(tournament, request.user) is None:
+        messages.error(request, "You are not part of this tournament.")
+        return redirect("home")
+
+    if tournament.status != Tournament.STATUS_ACTIVE:
+        messages.error(request, "Winners can only be set while the tournament is active.")
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    try:
+        discipline_id = int(request.POST.get("discipline_id", ""))
+        winner_id = int(request.POST.get("winner_id", ""))
+    except (TypeError, ValueError):
+        messages.error(request, "Invalid winner selection.")
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    if not tournament.disciplines.filter(id=discipline_id).exists():
+        messages.error(request, "That discipline is not part of this tournament.")
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    if not tournament.players.filter(user_id=winner_id).exists():
+        messages.error(request, "Winner must be one of the tournament players.")
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    TournamentDisciplineResult.objects.update_or_create(
+        tournament=tournament,
+        discipline_id=discipline_id,
+        defaults={"winner_id": winner_id},
+    )
+    return redirect("tournament_detail", pk=tournament.pk)
+
+
+@login_required
+@require_POST
+def tournament_finish(request: HttpRequest, pk: int) -> HttpResponse:
+    tournament = get_object_or_404(Tournament, pk=pk)
+    if _get_membership(tournament, request.user) is None:
+        messages.error(request, "You are not part of this tournament.")
+        return redirect("home")
+
+    if tournament.status == Tournament.STATUS_FINISHED:
+        return redirect("tournament_detail", pk=tournament.pk)
+
+    if tournament.status != Tournament.STATUS_ACTIVE:
+        messages.error(request, "Only an active tournament can be finished.")
+        return redirect("tournament_lobby", pk=tournament.pk)
+
+    tournament.finish()
+    messages.success(request, "Tournament finished.")
+    return redirect("tournament_detail", pk=tournament.pk)
 
 
 @login_required

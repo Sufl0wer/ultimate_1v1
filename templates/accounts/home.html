@@ -33,7 +33,7 @@
         <span class="muted">· {{ tournament.get_status_display }}</span>
         <div class="muted small">Code: {{ tournament.invite_code }}</div>
       </div>
-      {% if tournament.status == "active" %}
+      {% if tournament.status == "active" or tournament.status == "finished" %}
       <a class="btn btn-secondary" href="{% url 'tournament_detail' tournament.pk %}">Open</a>
       {% else %}
       <a class="btn btn-secondary" href="{% url 'tournament_lobby' tournament.pk %}">Lobby</a>

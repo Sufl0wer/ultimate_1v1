@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 from django.utils.translation import gettext_lazy as _
 
-from accounts.models import Discipline, Tournament, TournamentPlayer, User
+from accounts.models import Discipline, Tournament, TournamentDisciplineResult, TournamentPlayer, User
 
 
 class UserAdminCreationForm(UserCreationForm):
@@ -79,3 +79,11 @@ class TournamentPlayerAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "tournament__invite_code")
     filter_horizontal = ("selected_disciplines",)
     autocomplete_fields = ("tournament", "user")
+
+
+@admin.register(TournamentDisciplineResult)
+class TournamentDisciplineResultAdmin(admin.ModelAdmin):
+    list_display = ("id", "tournament", "discipline", "winner", "updated_at")
+    list_filter = ("discipline",)
+    search_fields = ("tournament__invite_code", "discipline__name", "winner__email")
+    autocomplete_fields = ("tournament", "discipline", "winner")

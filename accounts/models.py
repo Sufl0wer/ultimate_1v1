@@ -68,10 +68,12 @@ class Tournament(models.Model):
     STATUS_WAITING = "waiting"
     STATUS_SELECTING = "selecting"
     STATUS_ACTIVE = "active"
+    STATUS_FINISHED = "finished"
     STATUS_CHOICES = [
         (STATUS_WAITING, "Waiting for opponent"),
         (STATUS_SELECTING, "Selecting disciplines"),
         (STATUS_ACTIVE, "Active"),
+        (STATUS_FINISHED, "Finished"),
     ]
 
     invite_code = models.CharField(max_length=16, unique=True, db_index=True)
@@ -146,6 +148,17 @@ class Tournament(models.Model):
         self.disciplines.set(selected_ids)
         return True
 
+    def finish(self) -> bool:
+        if self.status == self.STATUS_FINISHED:
+            return True
+        if self.status != self.STATUS_ACTIVE:
+            return False
+
+        self.status = self.STATUS_FINISHED
+        self.end_time = timezone.now()
+        self.save(update_fields=["status", "end_time"])
+        return True
+
 
 class TournamentPlayer(models.Model):
     tournament = models.ForeignKey(
@@ -172,3 +185,29 @@ class TournamentPlayer(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} in {self.tournament}"
+
+
+class TournamentDisciplineResult(models.Model):
+    tournament = models.ForeignKey(
+        Tournament,
+        on_delete=models.CASCADE,
+        related_name="discipline_results",
+    )
+    discipline = models.ForeignKey(
+        Discipline,
+        on_delete=models.CASCADE,
+        related_name="tournament_results",
+    )
+    winner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="discipline_wins",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("tournament", "discipline")]
+        ordering = ["discipline__name"]
+
+    def __str__(self) -> str:
+        return f"{self.discipline} winner: {self.winner}"
