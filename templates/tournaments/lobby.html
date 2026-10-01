@@ -38,6 +38,21 @@
   <div class="alert alert-success">You’re ready. Waiting for your opponent to confirm.</div>
   {% endif %}
 
+  <form id="speedrun-search-form" method="POST" action="">
+    {% csrf_token %}
+    <input type="hidden" name="gameName" id="selected-speedrun">
+
+    <div class="search-wrapper">
+      <input type="text" id="search-input" placeholder="Type to search games..." autocomplete="off">
+      
+      <div>
+        <select id="results-dropdown" size="5" style="display: none;">
+        </select>
+      </div>
+    </div>
+  </form>
+
+
   <form class="form" method="post" action="{% url 'tournament_ready' tournament.pk %}">
     {% csrf_token %}
     <h2 class="section-title">Disciplines</h2>
@@ -134,5 +149,74 @@
   setInterval(pollStatus, 2500);
   pollStatus();
 })();
+</script>
+
+<script>
+  const searchInput = document.getElementById('search-input');
+  const resultsDropdown = document.getElementById('results-dropdown');
+
+  let debounceTimer;
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+
+    const query = searchInput.value.trim();
+
+    if (query.length === 0) {
+      resultsDropdown.innerHTML = '';
+      resultsDropdown.style.display = 'none';
+      return;
+    }
+
+    debounceTimer = setTimeout(() => {
+      fetchSearchResults(query);
+    }, 300);
+  });
+
+  function fetchSearchResults(query) {
+    fetch(`/speedrun_search/?q=${encodeURIComponent(query)}`)
+      .then(response => response.json())
+      .then(data => {
+        resultsDropdown.innerHTML = '';
+
+        if (data.length === 0) {
+          const noResultOption = document.createElement('option');
+          noResultOption.textContent = "No results found";
+          noResultOption.disabled = true;
+          resultsDropdown.appendChild(noResultOption);
+          resultsDropdown.style.display = 'block';
+          return;
+        }
+
+        data.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item;
+          option.textContent = item;
+          resultsDropdown.appendChild(option);
+        });
+
+        resultsDropdown.style.display = 'block';
+      })
+      .catch(error => console.error('Error fetching search results:', error));
+  }
+
+  const speedrunSearchForm = document.getElementById('speedrun-search-form');
+  const selectedSpeedrunInput = document.getElementById('selected-speedrun');
+
+  resultsDropdown.addEventListener('change', () => {
+    const selectedOption = resultsDropdown.options[resultsDropdown.selectedIndex];
+
+    if (selectedOption && !selectedOption.disabled) {
+
+      selectedSpeedrunInput.value = selectedOption.value;
+
+      const currentPath = window.location.pathname;
+      const targetUrl = currentPath + 'speedrun_create/';
+
+      speedrunSearchForm.action = targetUrl;
+
+      speedrunSearchForm.submit();
+    }
+  });
 </script>
 {% endblock %}

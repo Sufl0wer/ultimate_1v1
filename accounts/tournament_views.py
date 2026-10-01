@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from accounts.models import Discipline, Tournament, TournamentDisciplineResult, TournamentPlayer
+from services.speedrun.client import SpeedrunClient
 
 
 def _get_membership(tournament: Tournament, user) -> TournamentPlayer | None:
@@ -128,6 +129,27 @@ def tournament_lobby(request: HttpRequest, pk: int) -> HttpResponse:
         },
     )
 
+def speedrun_search(request):
+    client = SpeedrunClient()
+    query = request.GET.get('q')
+    if query:
+        results = client.get_game_search_results(query)
+    else:
+        results = []
+        
+    return JsonResponse(results, safe=False)
+
+
+@require_POST
+def tournament_speedrun_create(request, pk):
+    tournament = get_object_or_404(Tournament, pk=pk)
+    Discipline.objects.get_or_create(
+                name=request.POST.get('gameName'),
+                defaults={"description": 'this is discipline created through speedrun.com (change it to rules url)'},
+            )
+
+    return redirect("tournament_lobby", pk=tournament.pk)
+    
 
 @login_required
 @require_POST
@@ -190,8 +212,6 @@ def tournament_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
     if tournament.status not in (Tournament.STATUS_ACTIVE, Tournament.STATUS_FINISHED):
         return redirect("tournament_lobby", pk=tournament.pk)
-
-    # breakpoint()
 
     return render(
         request,

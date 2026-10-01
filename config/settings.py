@@ -3,10 +3,18 @@ Django settings for config project.
 """
 
 from pathlib import Path
+import os
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-(k2ef9+b0q40-hf5aclmv@1kr9pziz!6ew-8@xedp535^ep8$i"
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+SECRET_KEY = env('SECRET_KEY')
 
 DEBUG = True
 
@@ -89,3 +97,7 @@ MAILERS = {
 }
 
 DEFAULT_FROM_EMAIL = "noreply@example.com"
+
+
+SPEEDRUN_API_KEY=env('SPEEDRUN_API_KEY')
+SPEEDRUN_URL=env('SPEEDRUN_URL')

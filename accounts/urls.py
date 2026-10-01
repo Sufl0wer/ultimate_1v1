@@ -9,6 +9,8 @@ from accounts.tournament_views import (
     tournament_ready,
     tournament_set_discipline_winner,
     tournament_status,
+    speedrun_search,
+    tournament_speedrun_create
 )
 from accounts.views import EmailLoginView, EmailLogoutView, RegisterView, VerifyEmailView, home
 
@@ -30,4 +32,6 @@ urlpatterns = [
     path("tournaments/<int:pk>/finish/", tournament_finish, name="tournament_finish"),
     path("tournaments/<int:pk>/status/", tournament_status, name="tournament_status"),
     path("tournaments/<int:pk>/", tournament_detail, name="tournament_detail"),
+    path('speedrun_search/', speedrun_search, name='speedrun_search'),
+    path("tournaments/<int:pk>/lobby/speedrun_create/", tournament_speedrun_create, name='tournament_speedrun_create'),
 ]
